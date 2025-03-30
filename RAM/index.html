@@ -1,0 +1,103 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Main</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
+</head>
+
+<body>
+
+	<pre id="elm"></pre>
+    <input type="file" id="file-input" style="display: none;" />
+    <script src="elm.js"></script>
+
+    <script>
+
+        var app = Elm.Main.init({
+            node: document.getElementById('elm')
+        });
+
+        app.ports.exportCode.subscribe(function (codeContent) {
+            var filename = 'exported_code.txt';
+            var blob = new Blob([codeContent], { type: 'text/plain;charset=utf-8' });
+
+            if (window.navigator.msSaveOrOpenBlob) {
+                window.navigator.msSaveOrOpenBlob(blob, filename);
+            } else {
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+
+                document.body.removeChild(link);
+            }
+        });
+
+        if (app.ports.importCode) {
+            app.ports.importCode.subscribe(() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.txt'; 
+                input.onchange = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const content = reader.result;
+                            app.ports.receiveCode.send(content); 
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            });
+        } else {
+            console.log('Available ports:', app.ports);
+        }	
+
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js")
+                .then(reg => console.log("Service Worker зарегистрирован", reg))
+                .catch(err => console.log("Ошибка регистрации Service Worker", err));
+        }
+  
+    </script>
+    <script>
+        console.log('JavaScript is working');
+        document.querySelector('.code-area').addEventListener('input', (e) => {
+            console.log('Input detected:', e.target.value);
+        });
+    </script>
+
+<script>
+    app.ports.scrollToElement.subscribe(function(elementId) {
+        console.log("Port received:", elementId);  // ✅ Должно появиться в Console
+        scrollToElement(elementId);
+    });
+
+    app.ports.scrollToRegister.subscribe(function(elementId) {
+        console.log("Scrolling to register:", elementId);
+        scrollToElement(elementId);
+    });
+
+    function scrollToElement(elementId) {
+        console.log("Scrolling to:", elementId);  // ✅ Elm отправил данные в JS
+
+        var element = document.getElementById(elementId);
+        if (element) {
+            console.log("Element found:", element);
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+            console.warn("Element NOT found:", elementId);  // ❌ Elm отправил, но элемента нет
+        }
+    }
+</script>
+
+
+    
+</body>
+</html>
