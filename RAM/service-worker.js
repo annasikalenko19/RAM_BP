@@ -6,7 +6,7 @@ const urlsToCache = [
     "/manifest.json"
 ];
 
-// 📌 Устанавливаем сервис-воркер и кэшируем файлы
+
 self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
@@ -15,7 +15,7 @@ self.addEventListener("install", event => {
     );
 });
 
-// 📌 Перехватываем сетевые запросы и загружаем из кэша, если офлайн
+
 self.addEventListener("fetch", event => {
     event.respondWith(
         caches.match(event.request).then(response => {
@@ -24,7 +24,7 @@ self.addEventListener("fetch", event => {
     );
 });
 
-// 📌 Удаляем старый кэш при обновлении
+
 self.addEventListener("activate", event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {

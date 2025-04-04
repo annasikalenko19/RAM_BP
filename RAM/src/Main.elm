@@ -14,8 +14,11 @@ import Html exposing (p)
 import Html exposing (h2)
 import Html exposing (ul)
 import Html exposing (li)
-import Html.Events exposing (stopPropagationOn)
-import Json.Decode as Decode
+import Html exposing (br)
+
+
+
+port saveToLocalStorage : String -> Cmd msg
 
 port importCode  : () -> Cmd msg
 port exportCode : String -> Cmd msg
@@ -25,6 +28,7 @@ port scrollToElement : String -> Cmd msg
 
 port scrollToRegister : String -> Cmd msg
 
+port updateCodeFromJs : (String -> msg) -> Sub msg
 -- MODEL
 
 type alias Model =
@@ -53,12 +57,16 @@ type alias Register =
     }
 
 
-initialModel : Model
-initialModel =
-    { code = ""
+initialModel : String -> Model
+initialModel savedCode =
+     let
+        parsedCommands =
+            getAllCommands savedCode
+    in
+    { code = savedCode
     , registers = List.range 0 100 |> List.map (\n -> { number = n, value = 0 })
     , tape = []
-    , commands = []
+    , commands = parsedCommands
     , tapeReadIndex = 0
     , outputTape = []
     , currentStep = -1
@@ -94,26 +102,29 @@ type Msg
     | ToggleHelpModal
     | IgnoredSliderChange String
     | NoOp
+    | UpdateCodeAndSave String
+    | CodeFromJs String 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         interval =
-            case round model.sliderValue of  -- ✅ Округляем `Float` в `Int`
+            case round model.sliderValue of  
                 1 -> 1000
                 2 -> 700
                 3 -> 500
                 4 -> 300
-                _ -> 1000  -- ✅ Значение по умолчанию
+                _ -> 1000  
 
     in
     Sub.batch
-        [ receiveCode CodeReceived  
+        [updateCodeFromJs CodeFromJs,
+        receiveCode CodeReceived  
         , if model.isRunning &&  model.currentStep < List.length model.commands then
             
-            Time.every (toFloat interval) (always Step)  -- ✅ Преобразуем `Int` в `Float`
+            Time.every (toFloat interval) (always Step)  
           else
-            Sub.none  -- ❌ Останавливаем таймер
+            Sub.none 
         ]
 
 
@@ -124,8 +135,6 @@ update msg model =
             let
                 newCommands =
                     getAllCommands newCode
-                _= Debug.log "Parsed Commands" newCommands
-                _= Debug.log "Tape" model.tape
             in
             ( { model
                 | code = newCode
@@ -151,19 +160,13 @@ update msg model =
 
         CompileCode ->
             let
-                _= Debug.log "model.tape" model.tape 
                 executionState =
                     executeCommands model.commands model.registers model.tape model.outputTape model.tapeReadIndex model.commands 0 False 0 []
 
-                newChangedRegisters =
-                            unique executionState.changedRegisters
-                            
-                _ = Debug.log "pocet instrukcii" executionState.amountOfExecutedCommands 
-                _ = Debug.log "pamatova zlozitost" (List.length newChangedRegisters) 
             in
             ( { model
                 | registers = executionState.registers
-                , outputTape = executionState.outputTape  -- ❗ Теперь обновляется outputTape!
+                , outputTape = executionState.outputTape 
                 , tapeReadIndex = executionState.tapeReadIndex
                 , currentStep = executionState.currentStep
                 , errorMessage = executionState.errorMessage
@@ -185,11 +188,10 @@ update msg model =
                 let
                     updatedIsRunning =
                         case executionState.errorMessage of
-                            Just _ -> False  -- ❌ Останавливаем выполнение при ошибке
+                            Just _ -> False  
                             Nothing -> model.isRunning
                     command = getAt model.currentStep model.commands
-                    -- _ = Debug.log " model.commands"  executionState.currentStep
-                    _ = Debug.log " model.currentStep"  executionState.currentStep
+                    
                     executionState =
                         
                         if model.currentStep == -1 then
@@ -197,7 +199,7 @@ update msg model =
                             , tape = model.tape
                             , outputTape = []
                             , tapeReadIndex = model.tapeReadIndex
-                            , currentStep = 0  -- ✅ Переход к шагу 0
+                            , currentStep = 0 
                             , errorMessage = Nothing
                             , errorStep = Nothing
                             , amountOfExecutedCommands = 0
@@ -210,7 +212,7 @@ update msg model =
                         else
                             { registers = model.registers, tape = model.tape, outputTape = model.outputTape, tapeReadIndex = model.tapeReadIndex, currentStep = model.currentStep + 1 , errorMessage = Nothing , errorStep = Nothing, amountOfExecutedCommands = model.amountOfExecutedCommands , changedRegisters = model.changedRegisters} 
                     newStep = executionState.currentStep
-                    -- Найти изменённый регистр
+                   
                     changedRegister =
                         executionState.registers
                             |> List.filter (\r -> 
@@ -225,10 +227,7 @@ update msg model =
                         case changedRegister of
                             Just reg -> scrollToRegister ("reg-" ++ String.fromInt reg.number)  
                             Nothing -> Cmd.none
-                    _ = Debug.log "model.errorStep AFTER execution" executionState.errorStep  -- ✅ Проверяем, изменяется ли errorStep
-
                     
-
                     tapeReadIndex2 =         
                         if executionState.currentStep  == List.length model.commands then
 
@@ -240,11 +239,6 @@ update msg model =
                             False
                         else
                             updatedIsRunning
-                    newChangedRegisters =
-                        if executionState.currentStep == List.length model.commands then
-                            unique executionState.changedRegisters
-                        else
-                            executionState.changedRegisters
 
                     newStep2 =
                         if executionState.currentStep  == List.length model.commands then
@@ -276,7 +270,7 @@ update msg model =
                     updatedModel = { model |isStepExecution = True, isRunning = False, currentStep =-1, tapeReadIndex= 0 }  
                 in
 
-                (updatedModel, Cmd.none)  -- Если команды закончились, не делаем ничего
+                (updatedModel, Cmd.none)  
             
         SliderChanged newValue ->
             ( { model | sliderValue = String.toFloat newValue |> Maybe.withDefault model.sliderValue }
@@ -320,7 +314,35 @@ update msg model =
         IgnoredSliderChange _->
             (model, Cmd.none)
         NoOp ->
-            (model, Cmd.none)
+            (model, Cmd.none) 
+
+
+
+        UpdateCodeAndSave newCode ->
+            let
+                newCommands =
+                    getAllCommands newCode
+            in
+            ( { model | code = newCode, commands = newCommands }, saveToLocalStorage newCode )    
+
+        CodeFromJs newCode ->
+            ({ model | code = newCode }, Cmd.none)
+
+addComments : String -> String
+addComments code =
+    String.join "\n"
+        (List.map commentLine (String.lines code))
+
+
+commentLine : String -> String
+commentLine line =
+    if String.startsWith "//" (String.trimLeft line) then
+        line
+    else
+        "// " ++ line
+
+   
+
 unique : List comparable -> List comparable
 unique list =
     List.foldl (\x acc -> if List.member x acc then acc else x :: acc) [] list
@@ -345,13 +367,13 @@ type alias ExecutionState =
 
 executeCommands : List String -> List Register -> List String -> List String -> Int -> List String -> Int -> Bool -> Int -> List Int-> ExecutionState
 executeCommands cmds registers tape outputTape readIndex allCommands currentStep isStepExecution amountOfExecutedCommands changedRegisters =
-    if amountOfExecutedCommands >= 20000 then
+    if amountOfExecutedCommands >= 1000000 then
         { registers = registers
         , tape = tape
         , outputTape = outputTape
         , tapeReadIndex = readIndex
         , currentStep = currentStep
-        , errorMessage = Just "⛔ Превышен лимит шагов. Возможен бесконечный цикл."
+        , errorMessage = Just "Bol prekročený limit krokov. Môže ísť o nekonečný cyklus."
         , errorStep = Just currentStep
         , amountOfExecutedCommands = amountOfExecutedCommands
         , changedRegisters = changedRegisters
@@ -383,11 +405,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
             }
 
         cmd :: rest ->
-            let
-                _= Debug.log "cmds" rest
-            in 
             case String.words cmd of
-                -- READ n: Читаем значение из tape и записываем в регистр n
                 ["read", numStr] ->
                     if String.contains "=" numStr then
                         createErrorState "Chyba: nesprávny formát príkazu READ. Použite READ <číslo registra> alebo READ *<číslo registra>." currentStep registers tape outputTape readIndex (changedRegisters)
@@ -432,14 +450,12 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                         Nothing ->
                             createErrorState "Chyba: nesprávny formát príkazu READ. Použite READ <číslo registra> alebo READ *<číslo registra>." currentStep registers tape outputTape readIndex (changedRegisters)
 
-                -- WRITE n: Записываем значение из регистра n в outputTape
                 ["write", numStr] ->
                     if String.contains "=" numStr then
                         createErrorState "Chyba: nesprávny formát príkazu WRITE. Použite WRITE <číslo registra> alebo WRITE *<číslo registra>." currentStep registers tape outputTape readIndex (changedRegisters)
                     else
                     case resolveRegisterAddress numStr registers of
                         Just realRegNum ->
-                            -- Получаем значение из регистра realRegNum
                             case List.head (List.filter (\r -> r.number == realRegNum) registers) of
                                 Just reg ->
                                     let
@@ -472,11 +488,11 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                 let 
                                     realValue =
                                         case String.uncons numStr of
-                                            Just ('=', constValue) -> constValue -- Убираем '=' и оставляем число
+                                            Just ('=', constValue) -> constValue 
                                             _ -> 
                                                 case List.head (List.filter (\r -> r.number == regNum) registers) of
-                                                    Just reg -> String.fromInt reg.value  -- Значение из регистра
-                                                    Nothing -> "0"  -- Если регистра нет, записываем 0
+                                                    Just reg -> String.fromInt reg.value  
+                                                    Nothing -> "0"  
                                     updatedRegisters = updateRegister 0 realValue registers
                                 in
                                 executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (0 :: changedRegisters)
@@ -484,7 +500,6 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                 createErrorState ("Chyba: register  " ++ numStr ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
 
                         Nothing ->
-                            -- Ошибка парсинга, продолжаем выполнение
                             createErrorState "Chyba: nesprávny formát príkazu LOAD. Použite LOAD <číslo registra> , LOAD *<číslo registra> alebo LOAD =<konštanta>." currentStep registers tape outputTape readIndex (changedRegisters)
 
                 ["store", numStr] ->
@@ -498,22 +513,17 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                             in
                             case maybeTargetReg of
                                 Just _ ->
-                                    -- Найти значение в регистре 0
                                     case List.head (List.filter (\r -> r.number == 0) registers) of
                                         Just regZero ->
-                                            -- ✅ Обновляем `regNum` значением из регистра 0
                                             let
                                                 updatedRegisters = updateRegister regNum (String.fromInt regZero.value) registers
                                             in
                                             executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep + 1) isStepExecution (amountOfExecutedCommands + 1) (regNum :: changedRegisters)
                                         Nothing ->
-                                            -- ❌ Если регистра 0 нет (маловероятно), продолжаем выполнение
                                             executeCommands rest registers tape outputTape readIndex allCommands (currentStep + 1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                 Nothing ->
-                                    -- ❌ Ошибка: `regNum` не найден в `registers`
                                     createErrorState ("Chyba: register  " ++ numStr ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                         Nothing ->
-                            -- ❌ Ошибка: `STORE` вызван с неправильным аргументом (например, `STORE X`)
                             createErrorState "Chyba: nesprávny formát príkazu STORE. Použite STORE <číslo registra> alebo STORE *<číslo registra>." currentStep registers tape outputTape readIndex (changedRegisters)
          
                 ["add", numStr] ->
@@ -523,15 +533,13 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                 createErrorState ("Chyba: register  " ++ numStr ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
                                 let
-                                    -- Проверяем, является ли numStr константой (начинается с '=')
                                     valueToAdd =
                                         case String.uncons numStr of
-                                            Just ('=', _) -> rawValue  -- ❗ Константа: оставляем как есть
+                                            Just ('=', _) -> rawValue
                                             _ ->
-                                                -- ❗ Обычная или непрямая адресация: ищем значение в `registers[rawValue]`
                                                 case List.head (List.filter (\r -> r.number == rawValue) registers) of
-                                                    Just reg -> reg.value  -- ✅ Значение из регистра
-                                                    Nothing -> -1  -- ❌ Ошибка: регистра нет
+                                                    Just reg -> reg.value
+                                                    Nothing -> -1 
                                 in
 
                                 case List.head (List.filter (\r -> r.number == 0) registers) of
@@ -542,10 +550,8 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                         in
                                         executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (0 :: changedRegisters)
                                     Nothing ->
-                                        -- Если регистра 0 нет (маловероятно), продолжаем выполнение
                                         executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                         Nothing ->
-                            -- ❌ Ошибка парсинга (`ADD x` вместо числа)
                             createErrorState "Chyba: nesprávny formát príkazu ADD. Použite ADD <číslo registra> , ADD *<číslo registra> alebo ADD =<konštanta>." currentStep registers tape outputTape readIndex (changedRegisters)
                 ["sub", numStr] ->
                     case resolveRegisterAddress numStr registers of
@@ -554,21 +560,17 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                 createErrorState ("Chyba: register  " ++ numStr ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
                             let
-                                -- Проверяем, является ли numStr константой (начинается с '=')
                                 valueToAdd =
                                     case String.uncons numStr of
-                                        Just ('=', _) -> rawValue  -- ❗ Константа: оставляем как есть
+                                        Just ('=', _) -> rawValue 
                                         _ ->
-                                            -- ❗ Обычная или непрямая адресация: ищем значение в `registers[rawValue]`
                                             case List.head (List.filter (\r -> r.number == rawValue) registers) of
-                                                Just reg -> reg.value  -- Значение из регистра
-                                                Nothing -> 0  -- Если регистра нет, используем 0
+                                                Just reg -> reg.value
+                                                Nothing -> 0  
 
                             in
-                            -- Найти значение в регистре 0
                             case List.head (List.filter (\r -> r.number == 0) registers) of
                                 Just regZero ->
-                                    -- ❗ Обновляем регистр 0, добавляя к нему `valueToAdd`
                                     let
                                         newValue = regZero.value - valueToAdd
                                         updatedRegisters = updateRegister 0 (String.fromInt newValue) registers
@@ -576,11 +578,9 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                     executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (0 :: changedRegisters)
 
                                 Nothing ->
-                                    -- Если регистра 0 нет (маловероятно), продолжаем выполнение
                                     executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1)  (changedRegisters)   
 
                         Nothing ->
-                            -- Ошибка парсинга (например, `ADD x`), продолжаем выполнение
                             createErrorState "Chyba: nesprávny formát príkazu SUB. Použite SUB <číslo registra> , SUB *<číslo registra> alebo SUB =<konštanta>." currentStep registers tape outputTape readIndex (changedRegisters)
                 ["mul", numStr] ->
                     case resolveRegisterAddress numStr registers of
@@ -590,21 +590,17 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                             else
 
                             let
-                                -- Проверяем, является ли numStr константой (начинается с '=')
                                 valueToAdd =
                                     case String.uncons numStr of
-                                        Just ('=', _) -> rawValue  -- ❗ Константа: оставляем как есть
+                                        Just ('=', _) -> rawValue  
                                         _ ->
-                                            -- ❗ Обычная или непрямая адресация: ищем значение в `registers[rawValue]`
                                             case List.head (List.filter (\r -> r.number == rawValue) registers) of
-                                                Just reg -> reg.value  -- Значение из регистра
-                                                Nothing -> 0  -- Если регистра нет, используем 0
+                                                Just reg -> reg.value  
+                                                Nothing -> 0 
 
                             in
-                            -- Найти значение в регистре 0
                             case List.head (List.filter (\r -> r.number == 0) registers) of
                                 Just regZero ->
-                                    -- ❗ Обновляем регистр 0, добавляя к нему `valueToAdd`
                                     let
                                         newValue = regZero.value * valueToAdd
                                         updatedRegisters = updateRegister 0 (String.fromInt newValue) registers
@@ -612,7 +608,6 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                     executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (0 :: changedRegisters)
 
                                 Nothing ->
-                                    -- Если регистра 0 нет (маловероятно), продолжаем выполнение
                                     executeCommands rest registers tape outputTape readIndex  allCommands   (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)          
 
                         Nothing ->
@@ -622,25 +617,20 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                     case resolveRegisterAddress numStr registers of
                         Just rawValue ->  
                             if rawValue == -1 then
-                                -- ❌ Ошибка: регистра `numStr` нет в `registers`
                                 createErrorState ("Chyba: register  " ++ numStr ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
                             let
-                                -- Проверяем, является ли numStr константой (начинается с '=')
                                 valueToAdd =
                                     case String.uncons numStr of
-                                        Just ('=', _) -> rawValue  -- ❗ Константа: оставляем как есть
+                                        Just ('=', _) -> rawValue
                                         _ ->
-                                            -- ❗ Обычная или непрямая адресация: ищем значение в `registers[rawValue]`
                                             case List.head (List.filter (\r -> r.number == rawValue) registers) of
-                                                Just reg -> reg.value  -- Значение из регистра
-                                                Nothing -> 0  -- Если регистра нет, используем 0
+                                                Just reg -> reg.value 
+                                                Nothing -> 0 
 
                             in
-                            -- Найти значение в регистре 0
                             case List.head (List.filter (\r -> r.number == 0) registers) of
                                 Just regZero ->
-                                    -- ❗ Обновляем регистр 0, добавляя к нему `valueToAdd`
                                     let
                                         newValue = regZero.value // valueToAdd
                                         updatedRegisters = updateRegister 0 (String.fromInt newValue) registers
@@ -648,7 +638,6 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                     executeCommands rest updatedRegisters tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (0 :: changedRegisters)
 
                                 Nothing ->
-                                    -- Если регистра 0 нет (маловероятно), продолжаем выполнение
                                     executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1)  isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)           
 
                         Nothing ->
@@ -660,14 +649,10 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
         
                             if isStepExecution then
                                 executeCommands rest registers tape outputTape readIndex allCommands newStep isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
-
-                                -- ✅ Пошаговое выполнение: обновляем `currentStep`, но выполняем `rest`
                             else
-                                        -- 🔄 Полное выполнение: выполняем `newCmds`
                                 executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                             
                         Nothing ->
-                            -- ❌ Если `label` не найден, просто продолжаем выполнение
                                 createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
 
                 ["jzero", label] ->
@@ -677,24 +662,17 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                             if reg.value == 0 then
                                 case findLabelPosition label allCommands of
                                     Just (newStep, newCmds) ->
-                                        let
-                                            _=Debug.log "newStep"  newStep
-                                        in
+
                                         
                                         if isStepExecution then
-                                        -- ✅ Пошаговое выполнение: обновляем `currentStep`, но выполняем `rest`
                                             executeCommands rest registers tape outputTape readIndex allCommands newStep isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                         else
-                                        -- 🔄 Полное выполнение: выполняем `newCmds`
                                             executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                     Nothing ->
-                                        -- ❌ Если `label` не найден, просто продолжаем выполнение
                                         createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
-                                -- 🚀 Если в регистре 0 НЕ 0, просто продолжаем выполнение
                                 executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                         Nothing ->
-                            -- ❌ Если регистра `0` вообще нет, продолжаем выполнение
                             executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
 
                 ["jgtz", label] ->
@@ -703,14 +681,10 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                             if reg.value > 0 then
                                 case findLabelPosition label allCommands of
                                     Just (newStep, newCmds) ->
-                                        let
-                                            _=Debug.log "newStep"  newStep
-                                        in
+
                                         if isStepExecution then
-                                        -- ✅ Пошаговое выполнение: обновляем `currentStep`, но выполняем `rest`
                                             executeCommands rest registers tape outputTape readIndex allCommands newStep isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                         else
-                                                    -- 🔄 Полное выполнение: выполняем `newCmds`
                                             executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                     Nothing ->
                                         createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
@@ -723,6 +697,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                         executeCommands rest registers tape outputTape readIndex allCommands (currentStep + 1) isStepExecution  amountOfExecutedCommands (changedRegisters)
                     else
                     createErrorState ("Chyba: nesprávny formát príkazu " ++ String.toUpper cmd ++ " .") currentStep registers tape outputTape readIndex (changedRegisters)
+
 createErrorState : String -> Int -> List Register -> List String -> List String -> Int -> List Int-> ExecutionState
 createErrorState errorMessage currentStep registers tape outputTape readIndex changedRegisters =
     { registers = registers
@@ -739,90 +714,81 @@ createErrorState errorMessage currentStep registers tape outputTape readIndex ch
 resolveRegisterAddress : String -> List Register -> Maybe Int
 resolveRegisterAddress regStr registers =
     case String.uncons regStr of
-        -- 🔹 Непрямая адресация (например, *5)
         Just ('*', rest) ->
             case String.toInt rest of
                 Just indirectRegNum ->
                     case List.head (List.filter (\r -> r.number == indirectRegNum) registers) of
-                        Just reg -> Just reg.value  -- ✅ Если регистр существует, возвращаем его значение
-                        Nothing -> Just -1  -- ❌ Chyba: register  не существует, возвращаем `-1`
-                Nothing -> Just -1  -- ❌ Ошибка парсинга числа, возвращаем `-1`
+                        Just reg -> Just reg.value  
+                        Nothing -> Just -1 
+                Nothing -> Just -1  
         
-        -- 🔹 Константа (например, =100)
         Just ('=', rest) ->
-            String.toInt rest  -- ✅ Просто конвертируем число
+            String.toInt rest  
         
-        -- 🔹 Прямая адресация (например, 5)
         _ ->
             case String.toInt regStr of
                 Just regNum ->
                     if List.any (\r -> r.number == regNum) registers then
-                        Just regNum  -- ✅ Регистр существует, возвращаем его номер
+                        Just regNum  
                     else
-                        Just -1  -- ❌ Ошибка: регистра нет, возвращаем `-1`
-                Nothing -> Just -1  -- ❌ Ошибка парсинга числа, возвращаем `-1`
+                        Just -1  
+                Nothing -> Just -1 
 
 
 findLabelPosition : String -> List String -> Maybe (Int, List String)
 findLabelPosition label cmds =
     let
         labelWithColon = label ++ ":"
-        indexedCmds = List.indexedMap Tuple.pair cmds  -- [(индекс, строка)]
+        indexedCmds = List.indexedMap Tuple.pair cmds 
     in
     case List.filter (\(i, cmd) -> cmd == labelWithColon) indexedCmds of
         (index, _) :: _ ->
-            -- ✅ Возвращаем индекс метки и команды после неё
             Just (index, List.drop (index + 1) cmds)
 
         [] ->
-            -- ❌ Если метка не найдена, возвращаем `Nothing`
             Nothing
 
 
--- Поиск метки и возврат списка после неё
 findAfterLabel : String -> List String -> Maybe (List String)
 findAfterLabel labelWithColon list =
     case list of
         [] -> Nothing
         x :: xs ->
             if String.toUpper x == labelWithColon then
-                Just xs  -- Нашли метку, возвращаем всё после неё
+                Just xs  
             else
-                findAfterLabel labelWithColon xs  -- Рекурсивный поиск
+                findAfterLabel labelWithColon xs  
 
--- Сбор команд до следующей метки
 collectCommands : List String -> List String
 collectCommands list =
     case list of
         [] -> []
         x :: xs ->
             if String.contains ":" x then
-                []  -- Остановиться на следующей метке
+                []  
             else
-                x :: collectCommands xs  -- Добавить команду и продолжить
+                x :: collectCommands xs  
 
 
 
 removeComments : String -> String
 removeComments code =
     code
-        |> String.lines  -- ✅ Разбиваем на строки
+        |> String.lines  
         |> List.map (\line -> 
             case String.split "//" line of
-                firstPart :: _ -> String.trim firstPart  -- ✅ Берём только код до `//`
+                firstPart :: _ -> String.trim firstPart 
                 [] -> line
            )
-        |> String.join "\n"  -- ✅ Объединяем строки обратно
+        |> String.join "\n"  
 
 parseLine : String -> List String
 parseLine line =
     if String.startsWith "//" (String.trimLeft line) then
-        []  -- ⛔ Строка — комментарий, не парсим
+        [] 
     else
     let
-         -- ❗ Убираем пробелы после * или =
         cleanedLine = removeSpacesAfterSpecialChars line
-        -- Приводим строку к нижнему регистру
         lineLower =
             String.toLower cleanedLine
 
@@ -840,21 +806,15 @@ parseLine line =
     List.map
         (\m ->
             case m.submatches of
-                -- 3 подгруппы: [Maybe label, Maybe cmd, Maybe arg]
                 [ Just label, Nothing, Nothing ] ->
-                    -- Например, label = "next" => вернём "next:"
                     label ++ ":"
 
                 [ Nothing, Just cmd, Just arg ] ->
-                    -- Например, cmd = "jzero", arg = " next"
                     cmd ++ " " ++ String.trim arg
 
                 [ Nothing, Just cmd, Nothing ] ->
-                    -- Команда без аргумента (например, "mul")
                     cmd
-
                 _ ->
-                    -- Если ничего не совпало
                     m.match
         )
         matches
@@ -863,7 +823,6 @@ parseLine line =
 removeSpacesAfterSpecialChars : String -> String
 removeSpacesAfterSpecialChars input =
     let
-        -- Заменяем `* ` на `*` и `= ` на `=`
         withoutSpaces = 
             input
                 |> String.replace " " ""
@@ -884,9 +843,9 @@ updateRegister regNum value registers =
 getAllCommands : String -> List String
 getAllCommands code =
     code
-        |> String.split "\n"        -- Разделяем на строки
-        |> List.map parseLine       -- Для каждой строки получаем список команд
-        |> List.concat             -- Склеиваем всё в один список
+        |> String.split "\n"        
+        |> List.map parseLine       
+        |> List.concat          
 
 -- VIEW
 
@@ -915,9 +874,10 @@ view model =
               div [ class "code-container" ]
                 [ 
                 textarea
-                        [ placeholder "Miesto pre napísanie kodu..."
+                        [ id "code-area"
+                        , placeholder "Miesto pre napísanie kodu..."
                         , value model.code
-                        , onInput UpdateCode
+                        , onInput UpdateCodeAndSave
                         , class "code-area"
                         ]
                         []
@@ -952,15 +912,15 @@ view model =
 getCommands : String -> List String
 getCommands code =
     code
-        |> String.split "\n"                    -- разбиваем на строки
-        |> List.map (String.split " ")          -- каждую строку разбиваем по пробелу
-        |> List.concat                          -- склеиваем всё в один список
-        |> List.filter (not << String.isEmpty)  -- убираем пустые строки (если где-то два пробела подряд)
+        |> String.split "\n"                    
+        |> List.map (String.split " ")         
+        |> List.concat                          
+        |> List.filter (not << String.isEmpty) 
 
 viewSecondTable : String -> Int -> Maybe Int -> Html msg
 viewSecondTable code currentStep errorStep =
     let
-        _ = Debug.log "Rendering viewSecondTable: errorStep=" errorStep 
+      
         allCommands = getAllCommands code
     in
     table []
@@ -977,12 +937,12 @@ viewSecondTable code currentStep errorStep =
                     (\idx cmd ->
                         let
                             isActive = idx == currentStep
-                            isError = errorStep == Just idx  -- ✅ Проверяем, строка с ошибкой или нет
+                            isError = errorStep == Just idx  
                             rowStyle =
                                 if isError then
                                     [ style "background-color" "red", style "color" "white" ] 
                                 else if isActive then
-                                    [ style "background-color" "lightgreen" ]  -- 🟡 Подсветка текущей команды
+                                    [ style "background-color" "lightgreen" ]  
                                 else
                                     []
                         in
@@ -1019,6 +979,7 @@ viewSlider value msg =
             [ style "margin-bottom" "5px"
             , style "font-size" "20px"
             , style "color" "black"
+            , style "font-family" "Verdana, Geneva, Tahoma, sans-serif"
             ]
             [ text "Rýchlosť" ]
         , input
@@ -1034,6 +995,7 @@ viewSlider value msg =
             , style "border-radius" "5px"
             , style "outline" "none"
             , style "appearance" "none"
+            , style "color" "#007bb5"
             ]
             []
         , div
@@ -1094,7 +1056,6 @@ viewSlider2 value msg =
 viewRegister : Register -> List Register -> List Register -> Html Msg
 viewRegister reg prevRegisters allRegisters =
     let
-        -- Определяем, сколько регистров изменилось
         changedRegisters =
             allRegisters
                 |> List.filter (\r ->
@@ -1103,7 +1064,6 @@ viewRegister reg prevRegisters allRegisters =
                         _ -> False
                 )
 
-        -- Проверяем, изменился ли текущий регистр
         prevRegValue =
             prevRegisters
                 |> List.filter (\r -> r.number == reg.number)
@@ -1112,7 +1072,7 @@ viewRegister reg prevRegisters allRegisters =
                 |> Maybe.withDefault reg.value
 
         isHighlighted =
-            reg.value /= prevRegValue && List.length changedRegisters == 1  -- ✅ Подсвечиваем только если изменился ровно 1 регистр
+            reg.value /= prevRegValue && List.length changedRegisters == 1  
 
         rowStyle =
             if isHighlighted then
@@ -1145,7 +1105,7 @@ viewTapeField index value =
             , Html.Attributes.value value
             , onInput (\str ->
                 if str == "" then
-                    UpdateTapeField index ""  -- ⬅️ разрешаем очистку поля
+                    UpdateTapeField index ""  
                 else if str == "-" then
                     UpdateTapeField index "-"
                 else
@@ -1197,15 +1157,27 @@ viewError errorMsg =
         Nothing ->
             text ""
 
+
 viewHelpModal : Bool -> Html Msg
 viewHelpModal show =
     if show then
         div [ class "modal-backdrop"
          ]
         
-            [ div [ class "modal"
-           ]
-                [ h2 [] [ text "Ako používať Random Access Machine" ],
+            [ div [ class "modal"]
+                [ div [ style "position" "relative" ]
+                [ h2 [] [ text "Návod na používanie Random Access Machine:" ]
+                , button
+                    [ onClick ToggleHelpModal
+                    , class "close-button"
+                    , style "position" "absolute"
+                    , style "top" "0"
+                    , style "right" "0"
+                    ]
+                    [ text "X" ]
+                ],
+
+
                  p [] [ text "Inštrukčná sada RAM" ]
                 , table [ class "help-table" ]
                
@@ -1322,23 +1294,63 @@ viewHelpModal show =
                         , li [] [ text "Rýchlosť 5 – okamžité vykonanie všetkých príkazov" ]
                         ]
                     ]
-                
-                
-                , div [ style "display" "flex", style "justify-content" "flex-end" ]
-                    [ button [ onClick ToggleHelpModal, class "close-button" ] [ text "Zavrieť" ] ]]
-
-
-                   
+                , div [style "display" "flex", style "align-items" "center", style "gap" "10px", style "color" "black",style "margin-top" "10px"]
+                [span [] [ text "Klávesová skratka na komentovanie kódu:"
+                    , Html.br [] []
+                    , text "Windows/Linux: Ctrl + /"
+                    , Html.br [] []
+                    , text "macOS: Control + /",
+                    instructionForCommenting
+                    
+           
+                    , br [] []
+                    ,  pwaInfo
+                    , br [] []
+                    , text "Spätná väzba a otázky sú vítané : annasikalenko19@gmail.com"
+                    ]
+                ]
+                ]
             ]
     else
         text ""
+instructionForCommenting: Html msg
+instructionForCommenting =
+    div []
+        [ text "Stlačením tejto skratky môžeš:"
+        , br [] []
+        , br [] []
+        , text "• Pridať komentár (//) na začiatok riadku, v ktorom sa nachádza kurzor."
+        , br [] []
+        , text "• Pri označení viacerých riadkov — pridať komentár na začiatok každého z nich."
+        , br [] []
+        , text "• Opätovným stlačením tej istej skratky sa komentáre z týchto riadkov odstránia."
+        ]
 
+pwaInfo : Html msg
+pwaInfo =
+    div [style "color" "black"]
+        [ text "Použitie simulátora ako PWA:"
+        , br [] []
+        , br [] []
+        , text "Tento simulátor je možné používať ako PWA (Progressívna webová aplikácia), čo znamená, že si ho môžeš pridať na plochu ako samostatnú aplikáciu."
+        , br [] []
+        , text "Ako postupovať pri inštalácii v prehliadači Chrome:"
+        , br [] []
+        , text "• Klikni na tri bodky v pravom hornom rohu prehliadača."
+        , br [] []
+        , text "• Prejdi do sekcie Cast, save and share." 
+        , br [] []
+        , text "• Vyber možnosť Install page as app." 
+        , br [] []
+        , text "• Potvrď kliknutím na Install."
+        , br [] []
+        ]        
 -- MAIN
 
-main : Program () Model Msg
+main : Program String Model Msg
 main =
     Browser.element
-        { init = \_ -> ( initialModel, Cmd.none )
+        { init = \flags -> (initialModel flags, Cmd.none)
         , update = update
         , view = view
         , subscriptions = subscriptions

@@ -6,7 +6,5 @@
     "background_color": "#4CAF50",
     "theme_color": "#4CAF50",
     "description": "Progressive web application for Random Access Machine",
-    "icons": [
-        
-    ]
+    "icons": []
 }
