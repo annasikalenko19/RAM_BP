@@ -53,7 +53,7 @@
                         const reader = new FileReader();
                         reader.onload = () => {
                             const content = reader.result;
-                            app.ports.receiveCode.send(content);
+                            app.ports.receiveCodeFromFile.send(content);
                         };
                         reader.readAsText(file);
                     }
@@ -75,11 +75,11 @@
     </script>
 
     <script>
-        app.ports.scrollToElement.subscribe(function (elementId) {
+        app.ports.scrollToRowInParsedTable.subscribe(function (elementId) {
             scrollToElement(elementId);
         });
 
-        app.ports.scrollToRegister.subscribe(function (elementId) {
+        app.ports.scrollToRowInRegisterTable.subscribe(function (elementId) {
             scrollToElement(elementId);
         });
 
@@ -111,7 +111,7 @@
                     textarea.selectionStart = result.selectionStart;
                     textarea.selectionEnd = result.selectionEnd;
 
-                    app.ports.updateCodeFromJs.send(result.code);
+                    app.ports.updateCodeWithComments.send(result.code);
                 }
             });
 

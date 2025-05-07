@@ -22,20 +22,20 @@ port saveToLocalStorage : String -> Cmd msg
 
 port importCode  : () -> Cmd msg
 port exportCode : String -> Cmd msg
-port receiveCode : (String -> msg) -> Sub msg
+port receiveCodeFromFile : (String -> msg) -> Sub msg
 
-port scrollToElement : String -> Cmd msg  
+port scrollToRowInParsedTable : String -> Cmd msg  
 
-port scrollToRegister : String -> Cmd msg
+port scrollToRowInRegisterTable : String -> Cmd msg
 
-port updateCodeFromJs : (String -> msg) -> Sub msg
+port updateCodeWithComments : (String -> msg) -> Sub msg
 -- MODEL
 
 type alias Model =
     { code : String
     , registers : List Register
     , tape : List String
-    , commands : List String  -- Список команд, полученных из кода
+    , commands : List String 
     , tapeReadIndex : Int
     , outputTape : List String
     , currentStep : Int
@@ -48,7 +48,6 @@ type alias Model =
     , amountOfExecutedCommands : Int
     , changedRegisters : List Int
     , showHelpModal : Bool
-
     }
 
 type alias Register =
@@ -85,10 +84,9 @@ initialModel savedCode =
 -- UPDATE
 
 type Msg
-    = UpdateCode String
-    | ExportCode
+    = ExportCode
     | ImportCode
-    | CodeReceived String
+    | CodeReceivedFromFile String
     | AddTapeField
     | UpdateTapeField Int String
     | CompileCode
@@ -103,7 +101,7 @@ type Msg
     | IgnoredSliderChange String
     | NoOp
     | UpdateCodeAndSave String
-    | CodeFromJs String 
+    | CodeWithComments String 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -118,8 +116,8 @@ subscriptions model =
 
     in
     Sub.batch
-        [updateCodeFromJs CodeFromJs,
-        receiveCode CodeReceived  
+        [updateCodeWithComments CodeWithComments,
+        receiveCodeFromFile CodeReceivedFromFile  
         , if model.isRunning &&  model.currentStep < List.length model.commands then
             
             Time.every (toFloat interval) (always Step)  
@@ -131,25 +129,13 @@ subscriptions model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UpdateCode newCode ->
-            let
-                newCommands =
-                    getAllCommands newCode
-            in
-            ( { model
-                | code = newCode
-                , commands = newCommands
-              }
-            , Cmd.none
-            )
-
         ExportCode ->
             (model, exportCode model.code)
 
         ImportCode ->
             ( model, importCode() )
 
-        CodeReceived importedCode ->
+        CodeReceivedFromFile importedCode ->
             ( { model | code = importedCode }, Cmd.none )    
 
         AddTapeField ->
@@ -221,11 +207,11 @@ update msg model =
                                     _ -> False
                             )
                             |> List.head
-                    cmdScrollCommand = scrollToElement ("row-" ++ String.fromInt newStep)
+                    cmdScrollCommand = scrollToRowInParsedTable ("row-" ++ String.fromInt newStep)
                     
                     cmdScrollRegister =
                         case changedRegister of
-                            Just reg -> scrollToRegister ("reg-" ++ String.fromInt reg.number)  
+                            Just reg -> scrollToRowInRegisterTable ("reg-" ++ String.fromInt reg.number)  
                             Nothing -> Cmd.none
                     
                     tapeReadIndex2 =         
@@ -325,7 +311,7 @@ update msg model =
             in
             ( { model | code = newCode, commands = newCommands }, saveToLocalStorage newCode )    
 
-        CodeFromJs newCode ->
+        CodeWithComments newCode ->
             ({ model | code = newCode }, Cmd.none)
 
 addComments : String -> String
@@ -367,6 +353,10 @@ type alias ExecutionState =
 
 executeCommands : List String -> List Register -> List String -> List String -> Int -> List String -> Int -> Bool -> Int -> List Int-> ExecutionState
 executeCommands cmds registers tape outputTape readIndex allCommands currentStep isStepExecution amountOfExecutedCommands changedRegisters =
+    let
+        _= Debug.log "amountOfExecutedCommands" amountOfExecutedCommands
+        _= Debug.log "cmd " cmds 
+    in
     if amountOfExecutedCommands >= 1000000 then
         { registers = registers
         , tape = tape
@@ -400,7 +390,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
             , currentStep = currentStep + 1
             , errorMessage = Nothing
             , errorStep = Nothing
-            , amountOfExecutedCommands = amountOfExecutedCommands + 1
+            , amountOfExecutedCommands = amountOfExecutedCommands
             , changedRegisters = changedRegisters
             }
 
@@ -653,7 +643,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                 executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                             
                         Nothing ->
-                                createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
+                                createErrorState ("Chyba: návestie " ++ String.toUpper label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
 
                 ["jzero", label] ->
                     case List.head (List.filter (\r -> r.number == 0) registers) of
@@ -669,7 +659,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                         else
                                             executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                     Nothing ->
-                                        createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
+                                        createErrorState ("Chyba: návestie " ++ String.toUpper label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
                                 executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                         Nothing ->
@@ -687,7 +677,7 @@ executeCommands cmds registers tape outputTape readIndex allCommands currentStep
                                         else
                                             executeCommands newCmds registers tape outputTape readIndex allCommands (newStep+1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                                     Nothing ->
-                                        createErrorState ("Chyba: label " ++ label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
+                                        createErrorState ("Chyba: návestie " ++ String.toUpper label ++ " neexistuje.") currentStep registers tape outputTape readIndex (changedRegisters)
                             else
                                 executeCommands rest registers tape outputTape readIndex allCommands (currentStep +1) isStepExecution (amountOfExecutedCommands + 1) (changedRegisters)
                         Nothing ->
@@ -784,11 +774,15 @@ removeComments code =
 
 parseLine : String -> List String
 parseLine line =
-    if String.startsWith "//" (String.trimLeft line) then
-        [] 
-    else
     let
-        cleanedLine = removeSpacesAfterSpecialChars line
+        lineWithoutComment =
+            case String.indexes "//" line of
+                [] ->
+                    line
+
+                index :: _ ->
+                    String.left index line
+        cleanedLine = removeSpacesAfterSpecialChars lineWithoutComment
         lineLower =
             String.toLower cleanedLine
 
@@ -896,7 +890,7 @@ view model =
                 [ text ("Jednotková časová zložitosť: "
                         ++ String.fromInt (
                             if model.amountOfExecutedCommands > 0 then
-                                model.amountOfExecutedCommands - 1
+                                model.amountOfExecutedCommands 
                             else
                                 0
                         )
@@ -927,8 +921,8 @@ viewSecondTable code currentStep errorStep =
         [ thead []
             [ tr []
                 [ th [] [ text "Index" ]
-                , th [] [ text "Label" ]
-                , th [] [ text "Command" ]
+                , th [] [ text "Návestie" ]
+                , th [] [ text "Príkaz" ]
                 ]
             ]
         , tbody []

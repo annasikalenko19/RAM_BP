@@ -5342,80 +5342,81 @@ var $author$project$Main$removeSpacesAfterSpecialChars = function (input) {
 };
 var $elm$core$String$toLower = _String_toLower;
 var $elm$core$String$trim = _String_trim;
-var $elm$core$String$trimLeft = _String_trimLeft;
 var $author$project$Main$parseLine = function (line) {
-	if (A2(
-		$elm$core$String$startsWith,
-		'//',
-		$elm$core$String$trimLeft(line))) {
-		return _List_Nil;
-	} else {
-		var maybePattern = $elm$regex$Regex$fromString('([a-zA-Z0-9_]+)\\s*:|(store|read|write|load|add|div|mul|sub|jgtz|jzero|jump|halt)(\\s*[=*]?\\s*[a-zA-Z0-9_]+)?');
-		var cleanedLine = $author$project$Main$removeSpacesAfterSpecialChars(line);
-		var lineLower = $elm$core$String$toLower(cleanedLine);
-		var matches = function () {
-			if (maybePattern.$ === 'Just') {
-				var pattern = maybePattern.a;
-				return A2($elm$regex$Regex$find, pattern, lineLower);
-			} else {
-				return _List_Nil;
-			}
-		}();
-		return A2(
-			$elm$core$List$map,
-			function (m) {
-				var _v0 = m.submatches;
-				_v0$3:
-				while (true) {
-					if (_v0.b) {
-						if (_v0.a.$ === 'Just') {
-							if ((((_v0.b.b && (_v0.b.a.$ === 'Nothing')) && _v0.b.b.b) && (_v0.b.b.a.$ === 'Nothing')) && (!_v0.b.b.b.b)) {
-								var label = _v0.a.a;
-								var _v1 = _v0.b;
-								var _v2 = _v1.a;
-								var _v3 = _v1.b;
-								var _v4 = _v3.a;
-								return label + ':';
-							} else {
-								break _v0$3;
-							}
+	var maybePattern = $elm$regex$Regex$fromString('([a-zA-Z0-9_]+)\\s*:|(store|read|write|load|add|div|mul|sub|jgtz|jzero|jump|halt)(\\s*[=*]?\\s*[a-zA-Z0-9_]+)?');
+	var lineWithoutComment = function () {
+		var _v13 = A2($elm$core$String$indexes, '//', line);
+		if (!_v13.b) {
+			return line;
+		} else {
+			var index = _v13.a;
+			return A2($elm$core$String$left, index, line);
+		}
+	}();
+	var cleanedLine = $author$project$Main$removeSpacesAfterSpecialChars(lineWithoutComment);
+	var lineLower = $elm$core$String$toLower(cleanedLine);
+	var matches = function () {
+		if (maybePattern.$ === 'Just') {
+			var pattern = maybePattern.a;
+			return A2($elm$regex$Regex$find, pattern, lineLower);
+		} else {
+			return _List_Nil;
+		}
+	}();
+	return A2(
+		$elm$core$List$map,
+		function (m) {
+			var _v0 = m.submatches;
+			_v0$3:
+			while (true) {
+				if (_v0.b) {
+					if (_v0.a.$ === 'Just') {
+						if ((((_v0.b.b && (_v0.b.a.$ === 'Nothing')) && _v0.b.b.b) && (_v0.b.b.a.$ === 'Nothing')) && (!_v0.b.b.b.b)) {
+							var label = _v0.a.a;
+							var _v1 = _v0.b;
+							var _v2 = _v1.a;
+							var _v3 = _v1.b;
+							var _v4 = _v3.a;
+							return label + ':';
 						} else {
-							if ((_v0.b.b && (_v0.b.a.$ === 'Just')) && _v0.b.b.b) {
-								if (_v0.b.b.a.$ === 'Just') {
-									if (!_v0.b.b.b.b) {
-										var _v5 = _v0.a;
-										var _v6 = _v0.b;
-										var cmd = _v6.a.a;
-										var _v7 = _v6.b;
-										var arg = _v7.a.a;
-										return cmd + (' ' + $elm$core$String$trim(arg));
-									} else {
-										break _v0$3;
-									}
-								} else {
-									if (!_v0.b.b.b.b) {
-										var _v8 = _v0.a;
-										var _v9 = _v0.b;
-										var cmd = _v9.a.a;
-										var _v10 = _v9.b;
-										var _v11 = _v10.a;
-										return cmd;
-									} else {
-										break _v0$3;
-									}
-								}
-							} else {
-								break _v0$3;
-							}
+							break _v0$3;
 						}
 					} else {
-						break _v0$3;
+						if ((_v0.b.b && (_v0.b.a.$ === 'Just')) && _v0.b.b.b) {
+							if (_v0.b.b.a.$ === 'Just') {
+								if (!_v0.b.b.b.b) {
+									var _v5 = _v0.a;
+									var _v6 = _v0.b;
+									var cmd = _v6.a.a;
+									var _v7 = _v6.b;
+									var arg = _v7.a.a;
+									return cmd + (' ' + $elm$core$String$trim(arg));
+								} else {
+									break _v0$3;
+								}
+							} else {
+								if (!_v0.b.b.b.b) {
+									var _v8 = _v0.a;
+									var _v9 = _v0.b;
+									var cmd = _v9.a.a;
+									var _v10 = _v9.b;
+									var _v11 = _v10.a;
+									return cmd;
+								} else {
+									break _v0$3;
+								}
+							}
+						} else {
+							break _v0$3;
+						}
 					}
+				} else {
+					break _v0$3;
 				}
-				return m.match;
-			},
-			matches);
-	}
+			}
+			return m.match;
+		},
+		matches);
 };
 var $author$project$Main$getAllCommands = function (code) {
 	return $elm$core$List$concat(
@@ -5456,11 +5457,11 @@ var $author$project$Main$initialModel = function (savedCode) {
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $author$project$Main$CodeFromJs = function (a) {
-	return {$: 'CodeFromJs', a: a};
+var $author$project$Main$CodeReceivedFromFile = function (a) {
+	return {$: 'CodeReceivedFromFile', a: a};
 };
-var $author$project$Main$CodeReceived = function (a) {
-	return {$: 'CodeReceived', a: a};
+var $author$project$Main$CodeWithComments = function (a) {
+	return {$: 'CodeWithComments', a: a};
 };
 var $author$project$Main$Step = {$: 'Step'};
 var $elm$core$Basics$always = F2(
@@ -5884,9 +5885,9 @@ var $elm$time$Time$every = F2(
 			A2($elm$time$Time$Every, interval, tagger));
 	});
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Main$receiveCode = _Platform_incomingPort('receiveCode', $elm$json$Json$Decode$string);
+var $author$project$Main$receiveCodeFromFile = _Platform_incomingPort('receiveCodeFromFile', $elm$json$Json$Decode$string);
 var $elm$core$Basics$round = _Basics_round;
-var $author$project$Main$updateCodeFromJs = _Platform_incomingPort('updateCodeFromJs', $elm$json$Json$Decode$string);
+var $author$project$Main$updateCodeWithComments = _Platform_incomingPort('updateCodeWithComments', $elm$json$Json$Decode$string);
 var $author$project$Main$subscriptions = function (model) {
 	var interval = function () {
 		var _v0 = $elm$core$Basics$round(model.sliderValue);
@@ -5906,8 +5907,8 @@ var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
-				$author$project$Main$updateCodeFromJs($author$project$Main$CodeFromJs),
-				$author$project$Main$receiveCode($author$project$Main$CodeReceived),
+				$author$project$Main$updateCodeWithComments($author$project$Main$CodeWithComments),
+				$author$project$Main$receiveCodeFromFile($author$project$Main$CodeReceivedFromFile),
 				(model.isRunning && (_Utils_cmp(
 				model.currentStep,
 				$elm$core$List$length(model.commands)) < 0)) ? A2(
@@ -6021,6 +6022,7 @@ var $elm$core$List$head = function (list) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Main$resolveRegisterAddress = F2(
 	function (regStr, registers) {
 		var _v0 = $elm$core$String$uncons(regStr);
@@ -6113,6 +6115,8 @@ var $author$project$Main$executeCommands = function (cmds) {
 									return function (changedRegisters) {
 										executeCommands:
 										while (true) {
+											var _v0 = A2($elm$core$Debug$log, 'amountOfExecutedCommands', amountOfExecutedCommands);
+											var _v1 = A2($elm$core$Debug$log, 'cmd ', cmds);
 											if (amountOfExecutedCommands >= 1000000) {
 												return {
 													amountOfExecutedCommands: amountOfExecutedCommands,
@@ -6130,24 +6134,24 @@ var $author$project$Main$executeCommands = function (cmds) {
 													return {amountOfExecutedCommands: amountOfExecutedCommands, changedRegisters: changedRegisters, currentStep: currentStep, errorMessage: $elm$core$Maybe$Nothing, errorStep: $elm$core$Maybe$Nothing, outputTape: outputTape, registers: registers, tape: tape, tapeReadIndex: readIndex};
 												} else {
 													if (cmds.a === 'halt') {
-														return {amountOfExecutedCommands: amountOfExecutedCommands + 1, changedRegisters: changedRegisters, currentStep: currentStep + 1, errorMessage: $elm$core$Maybe$Nothing, errorStep: $elm$core$Maybe$Nothing, outputTape: outputTape, registers: registers, tape: tape, tapeReadIndex: readIndex};
+														return {amountOfExecutedCommands: amountOfExecutedCommands, changedRegisters: changedRegisters, currentStep: currentStep + 1, errorMessage: $elm$core$Maybe$Nothing, errorStep: $elm$core$Maybe$Nothing, outputTape: outputTape, registers: registers, tape: tape, tapeReadIndex: readIndex};
 													} else {
 														var cmd = cmds.a;
 														var rest = cmds.b;
-														var _v1 = $elm$core$String$words(cmd);
-														_v1$11:
+														var _v3 = $elm$core$String$words(cmd);
+														_v3$11:
 														while (true) {
-															if ((_v1.b && _v1.b.b) && (!_v1.b.b.b)) {
-																switch (_v1.a) {
+															if ((_v3.b && _v3.b.b) && (!_v3.b.b.b)) {
+																switch (_v3.a) {
 																	case 'read':
-																		var _v2 = _v1.b;
-																		var numStr = _v2.a;
+																		var _v4 = _v3.b;
+																		var numStr = _v4.a;
 																		if (A2($elm$core$String$contains, '=', numStr)) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu READ. Použite READ <číslo registra> alebo READ *<číslo registra>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		} else {
-																			var _v3 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																			if (_v3.$ === 'Just') {
-																				var regNum = _v3.a;
+																			var _v5 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																			if (_v5.$ === 'Just') {
+																				var regNum = _v5.a;
 																				var registerExists = A2(
 																					$elm$core$List$any,
 																					function (r) {
@@ -6155,13 +6159,13 @@ var $author$project$Main$executeCommands = function (cmds) {
 																					},
 																					registers);
 																				if (registerExists) {
-																					var _v4 = $elm$core$List$head(
+																					var _v6 = $elm$core$List$head(
 																						A2($elm$core$List$drop, readIndex, tape));
-																					if (_v4.$ === 'Just') {
-																						var firstValue = _v4.a;
-																						var _v5 = $elm$core$String$toInt(firstValue);
-																						if (_v5.$ === 'Just') {
-																							var intVal = _v5.a;
+																					if (_v6.$ === 'Just') {
+																						var firstValue = _v6.a;
+																						var _v7 = $elm$core$String$toInt(firstValue);
+																						if (_v7.$ === 'Just') {
+																							var intVal = _v7.a;
 																							var updatedRegisters = A3(
 																								$author$project$Main$updateRegister,
 																								regNum,
@@ -6206,23 +6210,23 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			}
 																		}
 																	case 'write':
-																		var _v6 = _v1.b;
-																		var numStr = _v6.a;
+																		var _v8 = _v3.b;
+																		var numStr = _v8.a;
 																		if (A2($elm$core$String$contains, '=', numStr)) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu WRITE. Použite WRITE <číslo registra> alebo WRITE *<číslo registra>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		} else {
-																			var _v7 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																			if (_v7.$ === 'Just') {
-																				var realRegNum = _v7.a;
-																				var _v8 = $elm$core$List$head(
+																			var _v9 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																			if (_v9.$ === 'Just') {
+																				var realRegNum = _v9.a;
+																				var _v10 = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
 																						function (r) {
 																							return _Utils_eq(r.number, realRegNum);
 																						},
 																						registers));
-																				if (_v8.$ === 'Just') {
-																					var reg = _v8.a;
+																				if (_v10.$ === 'Just') {
+																					var reg = _v10.a;
 																					var newOutputTape = _Utils_ap(
 																						outputTape,
 																						_List_fromArray(
@@ -6262,11 +6266,11 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			}
 																		}
 																	case 'load':
-																		var _v9 = _v1.b;
-																		var numStr = _v9.a;
-																		var _v10 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																		if (_v10.$ === 'Just') {
-																			var regNum = _v10.a;
+																		var _v11 = _v3.b;
+																		var numStr = _v11.a;
+																		var _v12 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																		if (_v12.$ === 'Just') {
+																			var regNum = _v12.a;
 																			var registerExists = A2(
 																				$elm$core$List$any,
 																				function (r) {
@@ -6275,21 +6279,21 @@ var $author$project$Main$executeCommands = function (cmds) {
 																				registers);
 																			if (registerExists) {
 																				var realValue = function () {
-																					var _v11 = $elm$core$String$uncons(numStr);
-																					if ((_v11.$ === 'Just') && ('=' === _v11.a.a.valueOf())) {
-																						var _v12 = _v11.a;
-																						var constValue = _v12.b;
+																					var _v13 = $elm$core$String$uncons(numStr);
+																					if ((_v13.$ === 'Just') && ('=' === _v13.a.a.valueOf())) {
+																						var _v14 = _v13.a;
+																						var constValue = _v14.b;
 																						return constValue;
 																					} else {
-																						var _v13 = $elm$core$List$head(
+																						var _v15 = $elm$core$List$head(
 																							A2(
 																								$elm$core$List$filter,
 																								function (r) {
 																									return _Utils_eq(r.number, regNum);
 																								},
 																								registers));
-																						if (_v13.$ === 'Just') {
-																							var reg = _v13.a;
+																						if (_v15.$ === 'Just') {
+																							var reg = _v15.a;
 																							return $elm$core$String$fromInt(reg.value);
 																						} else {
 																							return '0';
@@ -6325,14 +6329,14 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu LOAD. Použite LOAD <číslo registra> , LOAD *<číslo registra> alebo LOAD =<konštanta>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		}
 																	case 'store':
-																		var _v14 = _v1.b;
-																		var numStr = _v14.a;
+																		var _v16 = _v3.b;
+																		var numStr = _v16.a;
 																		if (A2($elm$core$String$contains, '=', numStr)) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu STORE. Použite STORE <číslo registra> alebo STORE *<číslo registra>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		} else {
-																			var _v15 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																			if (_v15.$ === 'Just') {
-																				var regNum = _v15.a;
+																			var _v17 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																			if (_v17.$ === 'Just') {
+																				var regNum = _v17.a;
 																				var maybeTargetReg = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
@@ -6341,15 +6345,15 @@ var $author$project$Main$executeCommands = function (cmds) {
 																						},
 																						registers));
 																				if (maybeTargetReg.$ === 'Just') {
-																					var _v17 = $elm$core$List$head(
+																					var _v19 = $elm$core$List$head(
 																						A2(
 																							$elm$core$List$filter,
 																							function (r) {
 																								return !r.number;
 																							},
 																							registers));
-																					if (_v17.$ === 'Just') {
-																						var regZero = _v17.a;
+																					if (_v19.$ === 'Just') {
+																						var regZero = _v19.a;
 																						var updatedRegisters = A3(
 																							$author$project$Main$updateRegister,
 																							regNum,
@@ -6407,44 +6411,44 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			}
 																		}
 																	case 'add':
-																		var _v18 = _v1.b;
-																		var numStr = _v18.a;
-																		var _v19 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																		if (_v19.$ === 'Just') {
-																			var rawValue = _v19.a;
+																		var _v20 = _v3.b;
+																		var numStr = _v20.a;
+																		var _v21 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																		if (_v21.$ === 'Just') {
+																			var rawValue = _v21.a;
 																			if (_Utils_eq(rawValue, -1)) {
 																				return A7($author$project$Main$createErrorState, 'Chyba: register  ' + (numStr + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																			} else {
 																				var valueToAdd = function () {
-																					var _v21 = $elm$core$String$uncons(numStr);
-																					if ((_v21.$ === 'Just') && ('=' === _v21.a.a.valueOf())) {
-																						var _v22 = _v21.a;
+																					var _v23 = $elm$core$String$uncons(numStr);
+																					if ((_v23.$ === 'Just') && ('=' === _v23.a.a.valueOf())) {
+																						var _v24 = _v23.a;
 																						return rawValue;
 																					} else {
-																						var _v23 = $elm$core$List$head(
+																						var _v25 = $elm$core$List$head(
 																							A2(
 																								$elm$core$List$filter,
 																								function (r) {
 																									return _Utils_eq(r.number, rawValue);
 																								},
 																								registers));
-																						if (_v23.$ === 'Just') {
-																							var reg = _v23.a;
+																						if (_v25.$ === 'Just') {
+																							var reg = _v25.a;
 																							return reg.value;
 																						} else {
 																							return -1;
 																						}
 																					}
 																				}();
-																				var _v20 = $elm$core$List$head(
+																				var _v22 = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
 																						function (r) {
 																							return !r.number;
 																						},
 																						registers));
-																				if (_v20.$ === 'Just') {
-																					var regZero = _v20.a;
+																				if (_v22.$ === 'Just') {
+																					var regZero = _v22.a;
 																					var newValue = regZero.value + valueToAdd;
 																					var updatedRegisters = A3(
 																						$author$project$Main$updateRegister,
@@ -6500,44 +6504,44 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu ADD. Použite ADD <číslo registra> , ADD *<číslo registra> alebo ADD =<konštanta>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		}
 																	case 'sub':
-																		var _v24 = _v1.b;
-																		var numStr = _v24.a;
-																		var _v25 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																		if (_v25.$ === 'Just') {
-																			var rawValue = _v25.a;
+																		var _v26 = _v3.b;
+																		var numStr = _v26.a;
+																		var _v27 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																		if (_v27.$ === 'Just') {
+																			var rawValue = _v27.a;
 																			if (_Utils_eq(rawValue, -1)) {
 																				return A7($author$project$Main$createErrorState, 'Chyba: register  ' + (numStr + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																			} else {
 																				var valueToAdd = function () {
-																					var _v27 = $elm$core$String$uncons(numStr);
-																					if ((_v27.$ === 'Just') && ('=' === _v27.a.a.valueOf())) {
-																						var _v28 = _v27.a;
+																					var _v29 = $elm$core$String$uncons(numStr);
+																					if ((_v29.$ === 'Just') && ('=' === _v29.a.a.valueOf())) {
+																						var _v30 = _v29.a;
 																						return rawValue;
 																					} else {
-																						var _v29 = $elm$core$List$head(
+																						var _v31 = $elm$core$List$head(
 																							A2(
 																								$elm$core$List$filter,
 																								function (r) {
 																									return _Utils_eq(r.number, rawValue);
 																								},
 																								registers));
-																						if (_v29.$ === 'Just') {
-																							var reg = _v29.a;
+																						if (_v31.$ === 'Just') {
+																							var reg = _v31.a;
 																							return reg.value;
 																						} else {
 																							return 0;
 																						}
 																					}
 																				}();
-																				var _v26 = $elm$core$List$head(
+																				var _v28 = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
 																						function (r) {
 																							return !r.number;
 																						},
 																						registers));
-																				if (_v26.$ === 'Just') {
-																					var regZero = _v26.a;
+																				if (_v28.$ === 'Just') {
+																					var regZero = _v28.a;
 																					var newValue = regZero.value - valueToAdd;
 																					var updatedRegisters = A3(
 																						$author$project$Main$updateRegister,
@@ -6593,44 +6597,44 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu SUB. Použite SUB <číslo registra> , SUB *<číslo registra> alebo SUB =<konštanta>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		}
 																	case 'mul':
-																		var _v30 = _v1.b;
-																		var numStr = _v30.a;
-																		var _v31 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																		if (_v31.$ === 'Just') {
-																			var rawValue = _v31.a;
+																		var _v32 = _v3.b;
+																		var numStr = _v32.a;
+																		var _v33 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																		if (_v33.$ === 'Just') {
+																			var rawValue = _v33.a;
 																			if (_Utils_eq(rawValue, -1)) {
 																				return A7($author$project$Main$createErrorState, 'Chyba: register  ' + (numStr + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																			} else {
 																				var valueToAdd = function () {
-																					var _v33 = $elm$core$String$uncons(numStr);
-																					if ((_v33.$ === 'Just') && ('=' === _v33.a.a.valueOf())) {
-																						var _v34 = _v33.a;
+																					var _v35 = $elm$core$String$uncons(numStr);
+																					if ((_v35.$ === 'Just') && ('=' === _v35.a.a.valueOf())) {
+																						var _v36 = _v35.a;
 																						return rawValue;
 																					} else {
-																						var _v35 = $elm$core$List$head(
+																						var _v37 = $elm$core$List$head(
 																							A2(
 																								$elm$core$List$filter,
 																								function (r) {
 																									return _Utils_eq(r.number, rawValue);
 																								},
 																								registers));
-																						if (_v35.$ === 'Just') {
-																							var reg = _v35.a;
+																						if (_v37.$ === 'Just') {
+																							var reg = _v37.a;
 																							return reg.value;
 																						} else {
 																							return 0;
 																						}
 																					}
 																				}();
-																				var _v32 = $elm$core$List$head(
+																				var _v34 = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
 																						function (r) {
 																							return !r.number;
 																						},
 																						registers));
-																				if (_v32.$ === 'Just') {
-																					var regZero = _v32.a;
+																				if (_v34.$ === 'Just') {
+																					var regZero = _v34.a;
 																					var newValue = regZero.value * valueToAdd;
 																					var updatedRegisters = A3(
 																						$author$project$Main$updateRegister,
@@ -6686,44 +6690,44 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu MUL. Použite MUL <číslo registra> , MUL *<číslo registra> alebo MUL =<konštanta>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		}
 																	case 'div':
-																		var _v36 = _v1.b;
-																		var numStr = _v36.a;
-																		var _v37 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
-																		if (_v37.$ === 'Just') {
-																			var rawValue = _v37.a;
+																		var _v38 = _v3.b;
+																		var numStr = _v38.a;
+																		var _v39 = A2($author$project$Main$resolveRegisterAddress, numStr, registers);
+																		if (_v39.$ === 'Just') {
+																			var rawValue = _v39.a;
 																			if (_Utils_eq(rawValue, -1)) {
 																				return A7($author$project$Main$createErrorState, 'Chyba: register  ' + (numStr + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																			} else {
 																				var valueToAdd = function () {
-																					var _v39 = $elm$core$String$uncons(numStr);
-																					if ((_v39.$ === 'Just') && ('=' === _v39.a.a.valueOf())) {
-																						var _v40 = _v39.a;
+																					var _v41 = $elm$core$String$uncons(numStr);
+																					if ((_v41.$ === 'Just') && ('=' === _v41.a.a.valueOf())) {
+																						var _v42 = _v41.a;
 																						return rawValue;
 																					} else {
-																						var _v41 = $elm$core$List$head(
+																						var _v43 = $elm$core$List$head(
 																							A2(
 																								$elm$core$List$filter,
 																								function (r) {
 																									return _Utils_eq(r.number, rawValue);
 																								},
 																								registers));
-																						if (_v41.$ === 'Just') {
-																							var reg = _v41.a;
+																						if (_v43.$ === 'Just') {
+																							var reg = _v43.a;
 																							return reg.value;
 																						} else {
 																							return 0;
 																						}
 																					}
 																				}();
-																				var _v38 = $elm$core$List$head(
+																				var _v40 = $elm$core$List$head(
 																					A2(
 																						$elm$core$List$filter,
 																						function (r) {
 																							return !r.number;
 																						},
 																						registers));
-																				if (_v38.$ === 'Just') {
-																					var regZero = _v38.a;
+																				if (_v40.$ === 'Just') {
+																					var regZero = _v40.a;
 																					var newValue = (regZero.value / valueToAdd) | 0;
 																					var updatedRegisters = A3(
 																						$author$project$Main$updateRegister,
@@ -6779,13 +6783,13 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			return A7($author$project$Main$createErrorState, 'Chyba: nesprávny formát príkazu DIV. Použite DIV <číslo registra> , DIV *<číslo registra> alebo DIV =<konštanta>.', currentStep, registers, tape, outputTape, readIndex, changedRegisters);
 																		}
 																	case 'jump':
-																		var _v42 = _v1.b;
-																		var label = _v42.a;
-																		var _v43 = A2($author$project$Main$findLabelPosition, label, allCommands);
-																		if (_v43.$ === 'Just') {
-																			var _v44 = _v43.a;
-																			var newStep = _v44.a;
-																			var newCmds = _v44.b;
+																		var _v44 = _v3.b;
+																		var label = _v44.a;
+																		var _v45 = A2($author$project$Main$findLabelPosition, label, allCommands);
+																		if (_v45.$ === 'Just') {
+																			var _v46 = _v45.a;
+																			var newStep = _v46.a;
+																			var newCmds = _v46.b;
 																			if (isStepExecution) {
 																				var $temp$cmds = rest,
 																					$temp$registers = registers,
@@ -6832,26 +6836,34 @@ var $author$project$Main$executeCommands = function (cmds) {
 																				continue executeCommands;
 																			}
 																		} else {
-																			return A7($author$project$Main$createErrorState, 'Chyba: label ' + (label + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
+																			return A7(
+																				$author$project$Main$createErrorState,
+																				'Chyba: návestie ' + ($elm$core$String$toUpper(label) + ' neexistuje.'),
+																				currentStep,
+																				registers,
+																				tape,
+																				outputTape,
+																				readIndex,
+																				changedRegisters);
 																		}
 																	case 'jzero':
-																		var _v45 = _v1.b;
-																		var label = _v45.a;
-																		var _v46 = $elm$core$List$head(
+																		var _v47 = _v3.b;
+																		var label = _v47.a;
+																		var _v48 = $elm$core$List$head(
 																			A2(
 																				$elm$core$List$filter,
 																				function (r) {
 																					return !r.number;
 																				},
 																				registers));
-																		if (_v46.$ === 'Just') {
-																			var reg = _v46.a;
+																		if (_v48.$ === 'Just') {
+																			var reg = _v48.a;
 																			if (!reg.value) {
-																				var _v47 = A2($author$project$Main$findLabelPosition, label, allCommands);
-																				if (_v47.$ === 'Just') {
-																					var _v48 = _v47.a;
-																					var newStep = _v48.a;
-																					var newCmds = _v48.b;
+																				var _v49 = A2($author$project$Main$findLabelPosition, label, allCommands);
+																				if (_v49.$ === 'Just') {
+																					var _v50 = _v49.a;
+																					var newStep = _v50.a;
+																					var newCmds = _v50.b;
 																					if (isStepExecution) {
 																						var $temp$cmds = rest,
 																							$temp$registers = registers,
@@ -6898,7 +6910,15 @@ var $author$project$Main$executeCommands = function (cmds) {
 																						continue executeCommands;
 																					}
 																				} else {
-																					return A7($author$project$Main$createErrorState, 'Chyba: label ' + (label + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
+																					return A7(
+																						$author$project$Main$createErrorState,
+																						'Chyba: návestie ' + ($elm$core$String$toUpper(label) + ' neexistuje.'),
+																						currentStep,
+																						registers,
+																						tape,
+																						outputTape,
+																						readIndex,
+																						changedRegisters);
 																				}
 																			} else {
 																				var $temp$cmds = rest,
@@ -6947,23 +6967,23 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			continue executeCommands;
 																		}
 																	case 'jgtz':
-																		var _v49 = _v1.b;
-																		var label = _v49.a;
-																		var _v50 = $elm$core$List$head(
+																		var _v51 = _v3.b;
+																		var label = _v51.a;
+																		var _v52 = $elm$core$List$head(
 																			A2(
 																				$elm$core$List$filter,
 																				function (r) {
 																					return !r.number;
 																				},
 																				registers));
-																		if (_v50.$ === 'Just') {
-																			var reg = _v50.a;
+																		if (_v52.$ === 'Just') {
+																			var reg = _v52.a;
 																			if (reg.value > 0) {
-																				var _v51 = A2($author$project$Main$findLabelPosition, label, allCommands);
-																				if (_v51.$ === 'Just') {
-																					var _v52 = _v51.a;
-																					var newStep = _v52.a;
-																					var newCmds = _v52.b;
+																				var _v53 = A2($author$project$Main$findLabelPosition, label, allCommands);
+																				if (_v53.$ === 'Just') {
+																					var _v54 = _v53.a;
+																					var newStep = _v54.a;
+																					var newCmds = _v54.b;
 																					if (isStepExecution) {
 																						var $temp$cmds = rest,
 																							$temp$registers = registers,
@@ -7010,7 +7030,15 @@ var $author$project$Main$executeCommands = function (cmds) {
 																						continue executeCommands;
 																					}
 																				} else {
-																					return A7($author$project$Main$createErrorState, 'Chyba: label ' + (label + ' neexistuje.'), currentStep, registers, tape, outputTape, readIndex, changedRegisters);
+																					return A7(
+																						$author$project$Main$createErrorState,
+																						'Chyba: návestie ' + ($elm$core$String$toUpper(label) + ' neexistuje.'),
+																						currentStep,
+																						registers,
+																						tape,
+																						outputTape,
+																						readIndex,
+																						changedRegisters);
 																				}
 																			} else {
 																				var $temp$cmds = rest,
@@ -7059,10 +7087,10 @@ var $author$project$Main$executeCommands = function (cmds) {
 																			continue executeCommands;
 																		}
 																	default:
-																		break _v1$11;
+																		break _v3$11;
 																}
 															} else {
-																break _v1$11;
+																break _v3$11;
 															}
 														}
 														if (A2($elm$core$String$contains, ':', cmd)) {
@@ -7128,8 +7156,8 @@ var $author$project$Main$importCode = _Platform_outgoingPort(
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Main$saveToLocalStorage = _Platform_outgoingPort('saveToLocalStorage', $elm$json$Json$Encode$string);
-var $author$project$Main$scrollToElement = _Platform_outgoingPort('scrollToElement', $elm$json$Json$Encode$string);
-var $author$project$Main$scrollToRegister = _Platform_outgoingPort('scrollToRegister', $elm$json$Json$Encode$string);
+var $author$project$Main$scrollToRowInParsedTable = _Platform_outgoingPort('scrollToRowInParsedTable', $elm$json$Json$Encode$string);
+var $author$project$Main$scrollToRowInRegisterTable = _Platform_outgoingPort('scrollToRowInRegisterTable', $elm$json$Json$Encode$string);
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
 		takeReverse:
@@ -7262,14 +7290,6 @@ var $author$project$Main$update = F2(
 		update:
 		while (true) {
 			switch (msg.$) {
-				case 'UpdateCode':
-					var newCode = msg.a;
-					var newCommands = $author$project$Main$getAllCommands(newCode);
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{code: newCode, commands: newCommands}),
-						$elm$core$Platform$Cmd$none);
 				case 'ExportCode':
 					return _Utils_Tuple2(
 						model,
@@ -7278,7 +7298,7 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						model,
 						$author$project$Main$importCode(_Utils_Tuple0));
-				case 'CodeReceived':
+				case 'CodeReceivedFromFile':
 					var importedCode = msg.a;
 					return _Utils_Tuple2(
 						_Utils_update(
@@ -7391,7 +7411,7 @@ var $author$project$Main$update = F2(
 						var updatedIsRunning2 = _Utils_eq(
 							executionState.currentStep,
 							$elm$core$List$length(model.commands)) ? false : updatedIsRunning;
-						var cmdScrollCommand = $author$project$Main$scrollToElement(
+						var cmdScrollCommand = $author$project$Main$scrollToRowInParsedTable(
 							'row-' + $elm$core$String$fromInt(newStep));
 						var changedRegister = $elm$core$List$head(
 							A2(
@@ -7414,7 +7434,7 @@ var $author$project$Main$update = F2(
 						var cmdScrollRegister = function () {
 							if (changedRegister.$ === 'Just') {
 								var reg = changedRegister.a;
-								return $author$project$Main$scrollToRegister(
+								return $author$project$Main$scrollToRowInRegisterTable(
 									'reg-' + $elm$core$String$fromInt(reg.number));
 							} else {
 								return $elm$core$Platform$Cmd$none;
@@ -8676,14 +8696,14 @@ var $author$project$Main$viewSecondTable = F3(
 									_List_Nil,
 									_List_fromArray(
 										[
-											$elm$html$Html$text('Label')
+											$elm$html$Html$text('Návestie')
 										])),
 									A2(
 									$elm$html$Html$th,
 									_List_Nil,
 									_List_fromArray(
 										[
-											$elm$html$Html$text('Command')
+											$elm$html$Html$text('Príkaz')
 										]))
 								]))
 						])),
@@ -9118,7 +9138,7 @@ var $author$project$Main$view = function (model) {
 									[
 										$elm$html$Html$text(
 										'Jednotková časová zložitosť: ' + $elm$core$String$fromInt(
-											(model.amountOfExecutedCommands > 0) ? (model.amountOfExecutedCommands - 1) : 0))
+											(model.amountOfExecutedCommands > 0) ? model.amountOfExecutedCommands : 0))
 									])),
 								A2(
 								$elm$html$Html$div,
